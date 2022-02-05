@@ -110,6 +110,18 @@ public:
 
 
 
+	Dyn_array(Dyn_array& other) :
+		m_capacity{other.get_capacity()},
+		m_len{other.get_len()}
+	{
+		m_data_ptr = new data_t[other.get_capacity()]; 
+		for(size_t i = 0; i < other.get_len(); i++){
+			m_data_ptr[i] = other.m_data_ptr[i];
+		}
+	}
+
+
+
 	~Dyn_array()
 	{
 		delete[] m_data_ptr;
@@ -225,4 +237,3 @@ public:
 		return m_len == 0;
 	}
 };
-
