@@ -119,6 +119,57 @@ public:
 
 
 
+	void push(data_t value)
+	{
+		grow_if_needed();
+
+		m_data_ptr[m_len] = value;
+		m_len++;
+	}
+
+
+
+	void pop(void)
+	{
+		if(m_len == 0) throw std::length_error("Cannot pop array with size 0");
+		shrink_if_needed();
+		m_len--;
+	}
+
+
+
+	void insert(data_t value, size_t at_position)
+	{
+		if(at_position > m_len){
+			throw std::length_error("Cannot insert value at non-continuos position");
+		}
+		if(at_position == m_len){
+			push(value);
+			return;
+		}
+
+		grow_if_needed();
+		dislocate_right(at_position);
+		m_data_ptr[at_position] = value;
+	}
+
+
+
+	void remove(size_t position)
+	{
+		if(position >= m_len) throw std::length_error("Cannot remove value at position outside array");
+		if(position == m_len - 1){
+			--m_len;
+			shrink_if_needed();
+			return;
+		}
+
+		dislocate_left(position);
+		return;
+	}
+
+
+
 	data_t at(int64_t position)
 	{
 		position = position < 0 ? static_cast<int64_t>(m_len) + position : position;
