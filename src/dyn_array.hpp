@@ -182,7 +182,7 @@ public:
 
 
 
-	data_t at(int64_t position)
+	data_t at(int64_t position) const
 	{
 		position = position < 0 ? static_cast<int64_t>(m_len) + position : position;
 
@@ -194,7 +194,7 @@ public:
 	}
 
 
-	std::string as_string()
+	std::string as_string() const
 	{
 		std::stringstream ret_buffer{""};
 
@@ -218,21 +218,21 @@ public:
 
 
 
-	inline size_t get_len()
+	inline size_t get_len() const
 	{
 		return m_len;
 	}
 
 
 
-	inline size_t get_capacity()
+	inline size_t get_capacity() const
 	{
 		return m_capacity;
 	}
 
 
 
-	inline bool is_empty()
+	inline bool is_empty() const
 	{
 		return m_len == 0;
 	}
