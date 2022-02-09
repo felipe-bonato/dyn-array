@@ -128,12 +128,13 @@ public:
 	}
 
 
-	void push(data_t value)
+
+	void push(const data_t& value)
 	{
 		grow_if_needed();
 
 		m_data_ptr[m_len] = value;
-		m_len++;
+		++m_len;
 	}
 
 
@@ -141,39 +142,37 @@ public:
 	void pop(void)
 	{
 		if(m_len == 0) throw std::length_error("Cannot pop array with size 0");
+		--m_len;
 		shrink_if_needed();
-		m_len--;
 	}
 
 
 
-	void insert(data_t value, size_t at_position)
+	void insert(const data_t& value, const size_t index)
 	{
-		if(at_position > m_len){
 			throw std::length_error("Cannot insert value at non-continuos position");
+		if(index > m_len){
 		}
-		if(at_position == m_len){
+		if(index == m_len){
 			push(value);
 			return;
 		}
 
 		grow_if_needed();
-		dislocate_right(at_position);
-		m_data_ptr[at_position] = value;
+		dislocate_right(index);
+		m_data_ptr[index] = value;
 	}
 
 
 
-	void remove(size_t position)
+	void remove(const size_t index)
 	{
 		if(position >= m_len) throw std::length_error("Cannot remove value at position outside array");
-		if(position == m_len - 1){
-			--m_len;
-			shrink_if_needed();
+		if(index == m_len - 1){
+			pop();
 			return;
 		}
-
-		dislocate_left(position);
+		dislocate_left(index);
 		return;
 	}
 
@@ -190,7 +189,8 @@ public:
 	}
 
 
-	std::string as_string() const
+
+	std::string as_string(void) const
 	{
 		std::stringstream ret_buffer{""};
 
@@ -214,21 +214,21 @@ public:
 
 
 
-	inline size_t get_len() const
+	size_t get_len(void) const
 	{
 		return m_len;
 	}
 
 
 
-	inline size_t get_capacity() const
+	size_t get_capacity(void) const
 	{
 		return m_capacity;
 	}
 
 
 
-	inline bool is_empty() const
+	bool is_empty() const
 	{
 		return m_len == 0;
 	}
