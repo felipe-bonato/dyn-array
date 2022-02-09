@@ -113,6 +113,20 @@ public:
 	}
 
 
+	const data_t& operator[](const size_t index) const
+	{
+		if(index >= m_len) throw std::length_error("Index out of range");
+		return m_data_ptr[index];
+	}
+
+
+
+	data_t& operator[](const size_t index)
+	{
+		if(index >= m_len) throw std::length_error("Index out of range");
+		return m_data_ptr[index];
+	}
+
 
 	void push(data_t value)
 	{
@@ -165,15 +179,14 @@ public:
 
 
 
-	data_t at(int64_t position) const
+	const data_t& at(const int64_t index) const
 	{
-		position = position < 0 ? static_cast<int64_t>(m_len) + position : position;
+		auto actual_index = index < 0 ? static_cast<int64_t>(m_len) + index : index;
+	
+		// Checking for actual_index < 0 in case the original index < - m_len
+		if(actual_index < 0) throw std::length_error("Index out of bounds");
 
-		// Checking for position < 0 in case position is less than -m_len
-		if(position >= static_cast<int64_t>(m_len) || position < 0){
-			throw std::length_error("Cannot access item at position outside array");
-		}
-		return m_data_ptr[position];
+		return (*this)[static_cast<size_t>(actual_index)];
 	}
 
 
