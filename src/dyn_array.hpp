@@ -141,7 +141,7 @@ public:
 
 	void pop(void)
 	{
-		if(m_len == 0) throw std::length_error("Cannot pop array with size 0");
+		if(m_len == 0) throw std::length_error("Array already empty");
 		m_data_ptr[m_len - 1].~data_t();
 		--m_len;
 		shrink_if_needed();
@@ -151,8 +151,8 @@ public:
 
 	void insert(const data_t& value, const size_t index)
 	{
-			throw std::length_error("Cannot insert value at non-continuos position");
 		if(index > m_len){
+			throw std::length_error("Index out of bounds");
 		}
 		if(index == m_len){
 			push(value);
@@ -167,7 +167,7 @@ public:
 
 	void remove(const size_t index)
 	{
-		if(position >= m_len) throw std::length_error("Cannot remove value at position outside array");
+		if(index >= m_len) throw std::length_error("Index out of bounds");
 		if(index == m_len - 1){
 			pop();
 			return;
