@@ -6,53 +6,30 @@ template<typename data_t>
 class Dyn_array
 {
 private:
-	data_t *m_data_ptr;
-	size_t m_capacity;
-	size_t m_len;
+	data_t *m_data_ptr = nullptr;
+	size_t m_capacity = 0;
+	size_t m_len = 0;
 
 
 
-	void grow_if_needed()
+	void grow_if_needed(size_t surplus_capacity = 0)
 	{
-		// The "-1" is to give some headroom, and for a simpler dislocate_right
-		if(m_len >= m_capacity - 1) grow();
+		// The "-1" is to give some headroom, and for a simpler dislocate_right.
+		if(m_len + surplus_capacity >= m_capacity) realloc_data(m_capacity * 2);
 	}
 
 
 
-	void grow()
+	void shrink_if_needed(void)
 	{
-		realloc_data(m_capacity * 2);
+		// Using "m_capacity / 4" so we don't keep shrinking and growing when we are on the edge of
+		// capacity.
+		if(m_len <= m_capacity / 4 && m_capacity > 16) realloc_data(m_capacity / 2);
 	}
 
 
 
-	void shrink_if_needed()
-	{
-		if(m_capacity > 16 && m_len <= m_capacity / 4) shrink();
-	}
-
-
-
-	void shrink()
-	{
-		realloc_data(m_capacity / 2);
-	}
-
-
-
-	void realloc_data(size_t new_capacity)
-	{
-		data_t *new_data_ptr = new data_t[new_capacity];
-		copy_content(m_data_ptr, new_data_ptr, m_len);
-		delete[] m_data_ptr;
-		m_data_ptr = new_data_ptr;
-		m_capacity = new_capacity;
-	}
-
-
-
-	void copy_content(data_t *from, data_t *to, size_t content_len)
+	void copy_content(data_t *from, data_t *to, const size_t content_len)
 	{
 		for(size_t i = 0; i < content_len; ++i){
 			to[i] = from[i];
@@ -61,14 +38,24 @@ private:
 
 
 
-	void dislocate_right(size_t from_index)
+	void realloc_data(const size_t new_capacity)
 	{
-		// To make sure we have the space for the last item
-		++m_len;
-		grow_if_needed();
-		--m_len;
+		data_t *new_data_ptr = new data_t[new_capacity];
 
-		if(from_index + 1 > m_len) std::length_error("Cannot non-continuosly dislocate");
+		copy_content(m_data_ptr, new_data_ptr, m_len);
+
+		delete[] m_data_ptr;
+		m_data_ptr = new_data_ptr;
+		m_capacity = new_capacity;
+	}
+
+
+
+	void dislocate_right(const size_t from_index)
+	{
+		grow_if_needed(1);
+
+		if(from_index + 1 > m_len) throw std::length_error("Cannot non-continuosly dislocate");
 
 		// Casting to int64_t is needed cause size_t is unsigned
 		// and thus, dislocating from index 0 causes it to underflow
@@ -80,14 +67,14 @@ private:
 		}
 	
 		m_data_ptr[from_index] = 0;
-		m_len++;
+		++m_len;
 	}
 
 
 
-	void dislocate_left(size_t from_index)
+	void dislocate_left(const size_t from_index)
 	{
-		if(from_index + 1 > m_len) std::length_error("Cannot non-continuosly dislocate");
+		if(from_index + 1 > m_len) throw std::length_error("Cannot non-continuosly dislocate");
 
 		for(size_t i = from_index; i < m_len; ++i){
 			m_data_ptr[i] = m_data_ptr[i + 1];
@@ -100,12 +87,20 @@ private:
 
 
 public:
-	Dyn_array(size_t initial_size = 16) :
+	Dyn_array(const size_t initial_size = 16) :
 		m_data_ptr{new data_t[initial_size]},
 		m_capacity{initial_size},
 		m_len{0}
+	{}
+
+
+
+	Dyn_array(const Dyn_array& other) :
+		m_capacity{other.get_capacity()},
+		m_len{other.get_len()}
 	{
-		return;
+		m_data_ptr = new data_t[other.get_capacity()]; 
+		copy_content(other.m_data_ptr, m_data_ptr, other.get_len());
 	}
 
 
@@ -130,71 +125,85 @@ public:
 	}
 
 
+	const data_t& operator[](const size_t index) const
+	{
+		if(index >= m_len) throw std::length_error("Index out of range");
+		return m_data_ptr[index];
+	}
 
-	void push(data_t value)
+
+
+	data_t& operator[](const size_t index)
+	{
+		if(index >= m_len) throw std::length_error("Index out of range");
+		return m_data_ptr[index];
+	}
+
+
+
+	void push(const data_t& value)
 	{
 		grow_if_needed();
 
 		m_data_ptr[m_len] = value;
-		m_len++;
+		++m_len;
 	}
 
 
 
 	void pop(void)
 	{
-		if(m_len == 0) throw std::length_error("Cannot pop array with size 0");
+		if(m_len == 0) throw std::length_error("Array already empty");
+		m_data_ptr[m_len - 1].~data_t();
+		--m_len;
 		shrink_if_needed();
-		m_len--;
 	}
 
 
 
-	void insert(data_t value, size_t at_position)
+	void insert(const data_t& value, const size_t index)
 	{
-		if(at_position > m_len){
-			throw std::length_error("Cannot insert value at non-continuos position");
+		if(index > m_len){
+			throw std::length_error("Index out of bounds");
 		}
-		if(at_position == m_len){
+		if(index == m_len){
 			push(value);
 			return;
 		}
 
-		grow_if_needed();
-		dislocate_right(at_position);
-		m_data_ptr[at_position] = value;
+		dislocate_right(index);
+		m_data_ptr[index] = value;
 	}
 
 
 
-	void remove(size_t position)
+	void remove(const size_t index)
 	{
-		if(position >= m_len) throw std::length_error("Cannot remove value at position outside array");
-		if(position == m_len - 1){
-			--m_len;
-			shrink_if_needed();
+		if(index >= m_len) throw std::length_error("Index out of bounds");
+		if(index == m_len - 1){
+			pop();
 			return;
 		}
-
-		dislocate_left(position);
+		m_data_ptr[index].~data_t();
+		dislocate_left(index);
 		return;
 	}
 
 
 
-	data_t at(int64_t position)
+	const data_t& at(const int64_t index) const
 	{
-		position = position < 0 ? static_cast<int64_t>(m_len) + position : position;
+		auto actual_index = index < 0 ? static_cast<int64_t>(m_len) + index : index;
+	
+		// Checking for actual_index < 0 in case the original index < - m_len
+		if(actual_index < 0) throw std::length_error("Index out of bounds");
 
-		// Checking for position < 0 in case position is less than -m_len
-		if(position >= static_cast<int64_t>(m_len) || position < 0){
-			throw std::length_error("Cannot access item at position outside array");
-		}
-		return m_data_ptr[position];
+		return (*this)[static_cast<size_t>(actual_index)];
 	}
 
 
-	std::string as_string()
+
+	std::string as_string(void) const
 	{
 		std::stringstream ret_buffer{""};
 
@@ -218,21 +227,21 @@ public:
 
 
 
-	inline size_t get_len()
+	size_t get_len(void) const
 	{
 		return m_len;
 	}
 
 
 
-	inline size_t get_capacity()
+	size_t get_capacity(void) const
 	{
 		return m_capacity;
 	}
 
 
 
-	inline bool is_empty()
+	bool is_empty() const
 	{
 		return m_len == 0;
 	}
