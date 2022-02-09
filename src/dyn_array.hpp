@@ -6,53 +6,30 @@ template<typename data_t>
 class Dyn_array
 {
 private:
-	data_t *m_data_ptr;
-	size_t m_capacity;
-	size_t m_len;
+	data_t *m_data_ptr = nullptr;
+	size_t m_capacity = 0;
+	size_t m_len = 0;
 
 
 
-	void grow_if_needed()
+	void grow_if_needed(size_t surplus_capacity = 0)
 	{
-		// The "-1" is to give some headroom, and for a simpler dislocate_right
-		if(m_len >= m_capacity - 1) grow();
+		// The "-1" is to give some headroom, and for a simpler dislocate_right.
+		if(m_len + surplus_capacity >= m_capacity) realloc_data(m_capacity * 2);
 	}
 
 
 
-	void grow()
+	void shrink_if_needed(void)
 	{
-		realloc_data(m_capacity * 2);
+		// Using "m_capacity / 4" so we don't keep shrinking and growing when we are on the edge of
+		// capacity.
+		if(m_len <= m_capacity / 4 && m_capacity > 16) realloc_data(m_capacity / 2);
 	}
 
 
 
-	void shrink_if_needed()
-	{
-		if(m_capacity > 16 && m_len <= m_capacity / 4) shrink();
-	}
-
-
-
-	void shrink()
-	{
-		realloc_data(m_capacity / 2);
-	}
-
-
-
-	void realloc_data(size_t new_capacity)
-	{
-		data_t *new_data_ptr = new data_t[new_capacity];
-		copy_content(m_data_ptr, new_data_ptr, m_len);
-		delete[] m_data_ptr;
-		m_data_ptr = new_data_ptr;
-		m_capacity = new_capacity;
-	}
-
-
-
-	void copy_content(data_t *from, data_t *to, size_t content_len)
+	void copy_content(data_t *from, data_t *to, const size_t content_len)
 	{
 		for(size_t i = 0; i < content_len; ++i){
 			to[i] = from[i];
@@ -61,14 +38,24 @@ private:
 
 
 
-	void dislocate_right(size_t from_index)
+	void realloc_data(const size_t new_capacity)
 	{
-		// To make sure we have the space for the last item
-		++m_len;
-		grow_if_needed();
-		--m_len;
+		data_t *new_data_ptr = new data_t[new_capacity];
 
-		if(from_index + 1 > m_len) std::length_error("Cannot non-continuosly dislocate");
+		copy_content(m_data_ptr, new_data_ptr, m_len);
+
+		delete[] m_data_ptr;
+		m_data_ptr = new_data_ptr;
+		m_capacity = new_capacity;
+	}
+
+
+
+	void dislocate_right(const size_t from_index)
+	{
+		grow_if_needed(1);
+
+		if(from_index + 1 > m_len) throw std::length_error("Cannot non-continuosly dislocate");
 
 		// Casting to int64_t is needed cause size_t is unsigned
 		// and thus, dislocating from index 0 causes it to underflow
@@ -80,14 +67,14 @@ private:
 		}
 	
 		m_data_ptr[from_index] = 0;
-		m_len++;
+		++m_len;
 	}
 
 
 
-	void dislocate_left(size_t from_index)
+	void dislocate_left(const size_t from_index)
 	{
-		if(from_index + 1 > m_len) std::length_error("Cannot non-continuosly dislocate");
+		if(from_index + 1 > m_len) throw std::length_error("Cannot non-continuosly dislocate");
 
 		for(size_t i = from_index; i < m_len; ++i){
 			m_data_ptr[i] = m_data_ptr[i + 1];
@@ -100,24 +87,20 @@ private:
 
 
 public:
-	Dyn_array(size_t initial_size = 16) :
+	Dyn_array(const size_t initial_size = 16) :
 		m_data_ptr{new data_t[initial_size]},
 		m_capacity{initial_size},
 		m_len{0}
-	{
-		return;
-	}
+	{}
 
 
 
-	Dyn_array(Dyn_array& other) :
+	Dyn_array(const Dyn_array& other) :
 		m_capacity{other.get_capacity()},
 		m_len{other.get_len()}
 	{
 		m_data_ptr = new data_t[other.get_capacity()]; 
-		for(size_t i = 0; i < other.get_len(); i++){
-			m_data_ptr[i] = other.m_data_ptr[i];
-		}
+		copy_content(other.m_data_ptr, m_data_ptr, other.get_len());
 	}
 
 
