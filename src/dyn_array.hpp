@@ -142,6 +142,7 @@ public:
 	void pop(void)
 	{
 		if(m_len == 0) throw std::length_error("Cannot pop array with size 0");
+		m_data_ptr[m_len - 1].~data_t();
 		--m_len;
 		shrink_if_needed();
 	}
@@ -158,7 +159,6 @@ public:
 			return;
 		}
 
-		grow_if_needed();
 		dislocate_right(index);
 		m_data_ptr[index] = value;
 	}
@@ -172,6 +172,7 @@ public:
 			pop();
 			return;
 		}
+		m_data_ptr[index].~data_t();
 		dislocate_left(index);
 		return;
 	}
